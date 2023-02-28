@@ -1,0 +1,111 @@
+version: "3"
+services:
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    container_name: nginx
+    volumes:
+      - ./nginx/config:/etc/nginx/conf.d:ro
+      - certbot_cert:/etc/letsencrypt:ro
+      - ./nginx/dhparam:/etc/dhparam:ro
+      - wordpress:/var/www/html/wordpress
+      - phpmyadmin:/var/www/html/phpmyadmin
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      webbackend:
+        ipv4_address: 172.16.50.3
+  phpmyadmin:
+    image: phpmyadmin:fpm
+    restart: unless-stopped
+    container_name: phpmyadmin
+    environment:
+      MYSQL_ROOT_PASSWORD: supersecure
+      UPLOAD_LIMIT: 500M
+      PMA_HOST: 172.16.50.1
+    volumes:
+      - phpmyadmin:/var/www/html
+    networks:
+      webbackend:
+        ipv4_address: 172.16.50.4
+  wordpress:
+    image: wordpress:fpm
+    restart: unless-stopped
+    container_name: wordpress
+    # environment:
+    #   WORDPRESS_DB_HOST: 172.16.50.1
+    #   WORDPRESS_DB_NAME: wordpress
+    #   WORDPRESS_DB_USER: wordpress
+    #   WORDPRESS_DB_PASSWORD: wordpress_password
+    volumes:
+      - wordpress:/var/www/html
+      - ./wordpress/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - ./wordpress/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      webbackend:
+        ipv4_address: 172.16.50.5
+  lychee:
+    image: lycheeorg/lychee:latest
+    restart: unless-stopped
+    container_name: lychee
+    # environment:
+    #   DB_CONNECTION: mysql
+    #   DB_HOST: 172.16.50.1
+    #   DB_DATABASE: lychee
+    #   DB_USERNAME: lychee
+    #   DB_PASSWORD: lychee_password
+    volumes:
+      - lychee_config:/conf
+      - lychee_uploads:/uploads
+      - lychee_sym:/sym
+      - ./lychee/.env:/conf/.env
+    networks:
+      webbackend:
+        ipv4_address: 172.16.50.6
+  certbot:
+    profiles:
+      - first_time
+    image: certbot/dns-cloudflare
+    container_name: certbot
+    command: >-
+        certonly --test-cert
+        --non-interactive
+        --dns-cloudflare
+        --dns-cloudflare-credentials /etc/certbot/tokens/credentials.ini
+        --dns-cloudflare-propagation-seconds 50
+        --email mail@example.com
+        --agree-tos --no-eff-email
+        --force-renewal
+        --cert-name combine_cert
+        --domains wordpress.example.com,lychee.example.com,manager.example.com
+    volumes:
+      - ./certbot:/etc/certbot/tokens:ro
+      - certbot_cert:/etc/letsencrypt
+  certbot_renew:
+    profiles:
+      - cert_renew
+    image: certbot/dns-cloudflare
+    container_name: certbot_renew
+    command: >-
+        renew
+        --dns-cloudflare
+        --dns-cloudflare-credentials /etc/certbot/tokens/credentials.ini
+        --dns-cloudflare-propagation-seconds 50
+    volumes:
+      - ./certbot:/etc/certbot/tokens:ro
+      - certbot_cert:/etc/letsencrypt
+volumes:
+  phpmyadmin:
+  lychee_config:
+  lychee_uploads:
+  lychee_sym:
+  wordpress:
+  certbot_cert:
+networks:
+  webbackend:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 172.16.50.0/24
+         gateway: 172.16.50.1
