@@ -9,6 +9,8 @@ Version 1.0 released
 - Chinese 100%
 - English 100%
 
+**[Project docs](https://github.com/wlmqpsc/wply/tree/main/docs)**
+
 ## Features
 
 ### Build Your Stack by Yourself 💪
