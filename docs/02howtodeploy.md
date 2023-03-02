@@ -28,7 +28,7 @@ You need these env to run the project.
 - MariaDB 10.3 or later
 - MariaDB backup
 
-MariaDB after `10.11.1` can or later can listen on more than one address. if some service on host need to use DB you can install it without set firewall.
+MariaDB after `10.11.1` or later can listen on more than one address. if some service on host need to use DB you can install it without set firewall.
 
 ### Install docker
 
